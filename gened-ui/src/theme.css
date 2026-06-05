@@ -1,0 +1,120 @@
+:root{
+  --umd-red: #E21833;
+  --umd-gold: #FFD200;
+  --umd-black: #0B0B0B;
+  --bg: #F6F7FB;
+  --card: #FFFFFF;
+  --text: #121417;
+  --muted: #5B6470;
+  --border: rgba(18,20,23,0.10);
+}
+
+body{
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* App container */
+.appShell{
+  min-height: 100vh;
+}
+
+/* Header / brand */
+.brandRow{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 16px;
+  padding: 18px 24px 10px;
+}
+
+.brandTitle{
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 44px;
+  line-height: 1;
+  color: var(--umd-red);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.04);
+}
+
+.brandSubtitle{
+  margin-top: 8px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* UMD accent bar under header */
+.brandAccent{
+  height: 6px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--umd-red), var(--umd-gold));
+  border-radius: 999px;
+}
+
+/* Cards */
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(18,20,23,0.06);
+}
+
+/* Search */
+.searchInput{
+  background: #121417;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: 14px 16px;
+  outline: none;
+}
+.searchInput::placeholder{ color: rgba(255,255,255,0.55); }
+.searchInput:focus{
+  border-color: var(--umd-gold);
+  box-shadow: 0 0 0 4px rgba(255,210,0,0.28);
+}
+
+.searchButton{
+  background: var(--umd-red);
+  color: #fff;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 18px;
+  box-shadow: 0 10px 24px rgba(226,24,51,0.25);
+  cursor:pointer;
+}
+.searchButton:hover{
+  filter: brightness(0.96);
+}
+.searchButton:focus{
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(255,210,0,0.32), 0 10px 24px rgba(226,24,51,0.25);
+}
+
+/* Pills / badges */
+.pill{
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 12px;
+}
+.pillGold{
+  border-color: rgba(255,210,0,0.7);
+  box-shadow: inset 0 0 0 2px rgba(255,210,0,0.25);
+}
+.pillRed{
+  border-color: rgba(226,24,51,0.55);
+  box-shadow: inset 0 0 0 2px rgba(226,24,51,0.18);
+}
+
+/* Recharts container border to match theme */
+.chartWrap{
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: #fff;
+}

@@ -1,68 +1,169 @@
+@import "tailwindcss";
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color: #111827;
+  background: #f4f4f5;
+  font-family:
+    "Inter",
+    "Segoe UI",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+* {
+  box-sizing: border-box;
 }
-a:hover {
-  color: #535bf2;
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
+  min-height: 100vh;
+  background: #f7f7f5;
+  color: #111827;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+#root {
   min-height: 100vh;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+::selection {
+  background: rgba(226, 24, 51, 0.16);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.app-shell {
+  transition: opacity 240ms ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.app-shell-hidden {
+  opacity: 0;
+}
+
+.app-shell-visible {
+  opacity: 1;
+}
+
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: #f7f7f5;
+}
+
+.splash-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border: 1px solid #d5d9df;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.splash-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  animation: splash-bounce 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.splash-fallback {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #111827;
+  animation: splash-bounce 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.splash-wordmark {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #111827;
+  animation: splash-rise 900ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.splash-subtitle {
+  color: #5b6470;
+  font-size: 0.875rem;
+}
+
+.splash-static {
+  animation: none;
+}
+
+@keyframes splash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  a:hover {
-    color: #747bff;
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@keyframes splash-bounce {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  55% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .app-shell {
+    transition: none;
+  }
+
+  .splash-logo,
+  .splash-fallback,
+  .splash-wordmark {
+    animation: none;
   }
 }
