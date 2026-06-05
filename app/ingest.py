@@ -133,7 +133,7 @@ def load_grade_distributions_pt(path: str):
 
 # ---------- index builders ----------
 def build_chunks():
-    # Create the raw text corpus + ids used by BM25 and embeddings
+    # Create the raw text corpus + ids used by BM25 and embeddings.
     from sqlmodel import select
     texts, ids = [], []
     with Session(engine) as s:
@@ -142,7 +142,25 @@ def build_chunks():
             text = f"{c.id} {c.title or ''} {c.description or ''} geneds {geneds_str}"
             texts.append(text.strip())
             ids.append(f"course:{c.id}:0")
-        # (Optional) add prof/review documents similarly if you want them in search
+        for p in s.exec(select(Professor)).all():
+            text = f"{p.name or ''} {p.department or ''} rating {p.avg_rating or ''}"
+            texts.append(text.strip())
+            ids.append(f"prof:{p.id}:0")
+        for r in s.exec(select(Review)).all():
+            text = " ".join(
+                part
+                for part in [
+                    r.course_id or "",
+                    r.professor_id or "",
+                    r.review_text or "",
+                    r.term or "",
+                ]
+                if part
+            )
+            if not text:
+                continue
+            texts.append(text.strip())
+            ids.append(f"review:{r.id}:0")
     return texts, ids
 
 def build_indices(texts, ids):
@@ -175,6 +193,9 @@ def main():
 
     if args.reviews:
         load_planetterp_reviews(args.reviews)
+
+    if args.grades:
+        load_grade_distributions_pt(args.grades)
 
     # Rebuild BM25 + FAISS artifacts after loading data
     texts, ids = build_chunks()

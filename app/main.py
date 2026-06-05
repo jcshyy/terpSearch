@@ -1,31 +1,27 @@
 # app/main.py
-from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from functools import lru_cache
+from typing import List, Optional
 
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from app.search_service import HybridSearcher
 
 
 app = FastAPI(title="UMD Semantic Course & Professor Search")
 
-# How much to let "ease" influence ranking (0.0 = ignore, 1.0 = only ease)
-EASE_WEIGHT = 0.15
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5199",
-    "http://127.0.0.1:5199",
-],
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5199",
+        "http://127.0.0.1:5199",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-searcher = HybridSearcher.load_or_init()
 
 
 class SearchResult(BaseModel):
@@ -44,93 +40,83 @@ class SearchResponse(BaseModel):
     results: List[SearchResult]
 
 
+class CourseProfessorSummary(BaseModel):
+    id: str
+    name: str
+    avg_rating: Optional[float] = None
+    review_count: int
+
+
+class CourseReviewSummary(BaseModel):
+    id: str
+    professor_id: Optional[str] = None
+    professor_name: Optional[str] = None
+    rating: Optional[float] = None
+    term: Optional[str] = None
+    review_text: Optional[str] = None
+
+
+class CourseDetailResponse(BaseModel):
+    course_id: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    credits: Optional[int] = None
+    geneds: List[str]
+    avg_gpa: Optional[float] = None
+    ease_score: Optional[float] = None
+    pct_ab: Optional[float] = None
+    popularity: int
+    planetterp_url: str
+    grade_distribution: Optional[List[dict]] = None
+    professors: List[CourseProfessorSummary]
+    reviews: List[CourseReviewSummary]
+
+
+@lru_cache(maxsize=1)
+def get_searcher() -> HybridSearcher:
+    return HybridSearcher.load_or_init()
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
 
 
-def _clamp01(x: float) -> float:
-    return 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
-
-
-def _ease_from_meta(meta: Optional[Dict[str, Any]]) -> float:
-    """
-    Pull ease_score (0..1) from the result meta if present.
-    If missing, return neutral 0.5.
-    """
-    if not meta:
-        return 0.5
-
-    ease = meta.get("ease_score", None)
-    if ease is None:
-        return 0.5
-
-    try:
-        return _clamp01(float(ease))
-    except Exception:
-        return 0.5
-
-
-def _normalize_scores(results: List[Dict[str, Any]]) -> List[float]:
-    """
-    Normalize current search scores into [0,1] range so mixing is stable.
-    If all scores are equal or list is empty, return 0.5 for all.
-    """
-    if not results:
-        return []
-
-    scores = []
-    for r in results:
-        try:
-            scores.append(float(r.get("score", 0.0)))
-        except Exception:
-            scores.append(0.0)
-
-    lo = min(scores)
-    hi = max(scores)
-    if hi - lo == 0:
-        return [0.5 for _ in scores]
-
-    return [(_clamp01((s - lo) / (hi - lo))) for s in scores]
-
-
 @app.get("/search", response_model=SearchResponse)
 def search(
-    q: str,
-    top_k: int = 10,
-    alpha: float = 0.6,
+    q: str = "",
+    top_k: int = Query(default=10, ge=1, le=50),
+    alpha: float = Query(default=0.6, ge=0.0, le=1.0),
     dept: Optional[str] = None,
-    min_credits: Optional[int] = None,
+    gened: Optional[str] = Query(default=None, pattern="^[A-Za-z]{4}$"),
+    min_credits: Optional[int] = Query(default=None, ge=0),
+    min_avg_gpa: Optional[float] = Query(default=None, ge=0.0, le=4.0),
+    min_ease: Optional[float] = Query(default=None, ge=0.0, le=1.0),
+    min_popularity: Optional[int] = Query(default=None, ge=0),
+    sort_by: str = Query(default="relevance", pattern="^(relevance|popularity|gpa|ease)$"),
 ):
-    # 1) get base hybrid results
-    results = searcher.search(q, top_k=top_k, alpha=alpha, dept=dept, min_credits=min_credits)
+    has_filter = any(
+        value is not None and value != ""
+        for value in [dept, gened, min_credits, min_avg_gpa, min_ease, min_popularity]
+    )
+    if not q.strip() and not has_filter:
+        raise HTTPException(
+            status_code=400,
+            detail="Enter a search query or apply at least one filter.",
+        )
 
-    # 2) re-rank ONLY courses using ease_score
-    #    (professor docs and anything else keep original score)
-    norm_scores = _normalize_scores(results)
-
-    for i, r in enumerate(results):
-        kind = (r.get("kind") or "").lower()
-        if kind != "course":
-            continue
-
-        rel = norm_scores[i]  # normalized relevance in [0,1]
-        ease = _ease_from_meta(r.get("meta"))
-
-        final_score = (1.0 - EASE_WEIGHT) * rel + EASE_WEIGHT * ease
-
-        # store helpful debugging fields (won't break schema)
-        r["rel_score"] = rel
-        if r.get("meta") is None:
-            r["meta"] = {}
-        r["meta"]["ease_score_used"] = ease
-
-        # overwrite score with the combined score
-        r["score"] = final_score
-
-    # 3) final sort + cut to top_k (in case re-ranking changed order)
-    results.sort(key=lambda x: float(x.get("score", 0.0)), reverse=True)
-    results = results[:top_k]
+    results = get_searcher().search(
+        query=q,
+        top_k=top_k,
+        alpha=alpha,
+        dept=dept,
+        gened=gened,
+        min_credits=min_credits,
+        min_avg_gpa=min_avg_gpa,
+        min_ease=min_ease,
+        min_popularity=min_popularity,
+        sort_by=sort_by,
+    )
 
     return SearchResponse(
         query=q,
@@ -138,3 +124,11 @@ def search(
         alpha=alpha,
         results=[SearchResult(**r) for r in results],
     )
+
+
+@app.get("/courses/{course_id}", response_model=CourseDetailResponse)
+def course_detail(course_id: str):
+    detail = get_searcher().get_course_detail(course_id)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Course not found.")
+    return CourseDetailResponse(**detail)

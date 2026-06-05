@@ -9,6 +9,8 @@ class VectorIndex:
     def add(self, X: np.ndarray, ids: List[str]):
         self.index.add(X.astype(np.float32)); self.ids.extend(ids)
     def search(self, qvec: np.ndarray, top_k: int = 20) -> List[Tuple[str, float]]:
+        if not self.ids:
+            return []
         if qvec.ndim == 1: qvec = qvec[None, :]
         D, I = self.index.search(qvec.astype(np.float32), top_k)
         return [(self.ids[i], float(D[0][j])) for j,i in enumerate(I[0]) if i != -1]
